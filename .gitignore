@@ -1,0 +1,4 @@
+*.swp
+env/
+__pycache__/
+pyfido.egg-info/
