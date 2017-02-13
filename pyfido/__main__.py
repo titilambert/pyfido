@@ -1,5 +1,6 @@
 import argparse
 import json
+import sys
 
 from pyfido import FidoClient, REQUESTS_TIMEOUT
 
@@ -10,6 +11,7 @@ def _format_output(number, data):
                  for k, v in data.items()])
     data['number'] = number
     output = ("""Fido data for number: {d[number]}
+
 Balance
 =======
 Balance:      {d[balance]:.2f} $

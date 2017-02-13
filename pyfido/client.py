@@ -8,8 +8,6 @@ import re
 import requests
 
 
-_LOGGER = logging.getLogger('pyfido')
-
 REQUESTS_TIMEOUT = 15
 
 JANRAIN_CLIENT_ID = "bfkecrvys7sprse8kc4wtwugr2bj9hmp"
@@ -29,6 +27,10 @@ DATA_MAP = {'data': ('data', 'D'),
             'text_int': ('text', 'SI'),
             'talk': ('talk', 'V'),
             'talk_other': ('talk', 'VL')}
+
+
+class PyFidoError(Exception):
+    pass
 
 
 class FidoClient(object):
@@ -61,8 +63,7 @@ class FidoClient(object):
             raw_res = requests.post(LOGIN_URL, headers=self._headers,
                                     data=data, timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not sign in")
-            return False
+            raise PyFidoError("Can not sign in")
         # Get cookies
         self._cookies = raw_res.cookies
 
@@ -77,13 +78,11 @@ class FidoClient(object):
                                    cookies=self._cookies,
                                    timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not get token")
-            return False
+            raise PyFidoError("Can not get token")
         # Research for json in answer
         reg_res = re.search(r"\({.*}\)", raw_res.text)
         if reg_res is None:
-            _LOGGER.error("Can not finf token json")
-            return False
+            raise PyFidoError("Can not finf token json")
         # Load data as json
         return_data = json.loads(reg_res.group()[1:-1])
         # Get token and uuid
@@ -91,8 +90,7 @@ class FidoClient(object):
         uuid = return_data.get('result', {}).get('userData', {}).get('uuid')
         # Check values
         if token is None or uuid is None:
-            _LOGGER.error("Can not get token or uuid")
-            return False
+            raise PyFidoError("Can not get token or uuid")
         # Update cookies
         self._cookies.update(raw_res.cookies)
 
@@ -110,8 +108,7 @@ class FidoClient(object):
                                     headers=self._headers,
                                     timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not get account number")
-            return False
+            raise PyFidoError("Can not get account number")
         # Load answer as json
         try:
             account_number = raw_res.json()\
@@ -119,12 +116,10 @@ class FidoClient(object):
                             .get('accounts', [{}])[0]\
                             .get('accountNumber')
         except (OSError, ValueError):
-            _LOGGER.error("Bad json getting account number")
-            return False
+            raise PyFidoError("Bad json getting account number")
         # Check collected data
         if account_number is None:
-            _LOGGER.error("Can not get account number")
-            return False
+            raise PyFidoError("Can not get account number")
         # Update cookies
         self._cookies.update(raw_res.cookies)
 
@@ -144,25 +139,21 @@ class FidoClient(object):
                                     cookies=self._cookies,
                                     timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not get balance")
-            return False
+            raise PyFidoError("Can not get balance")
         # Get balance
         try:
             balance_str = raw_res.json()\
                             .get("getAccountInfo", {})\
                             .get("balance")
         except (OSError, ValueError):
-            _LOGGER.error("Can not get balance as json")
-            return False
+            raise PyFidoError("Can not get balance as json")
         if balance_str is None:
-            _LOGGER.error("Can not get balance")
-            return False
+            raise PyFidoError("Can not get balance")
         # Casting to float
         try:
             balance = float(balance_str)
         except ValueError:
-            _LOGGER.error("Can not get balance as float")
-            return False
+            raise PyFidoError("Can not get balance as float")
 
         return balance
 
@@ -183,25 +174,21 @@ class FidoClient(object):
                                     cookies=self._cookies,
                                     timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not get fido dollar")
-            return False
+            raise PyFidoError("Can not get fido dollar")
         # Get fido dollar
         try:
             fido_dollar_str = raw_res.json()\
                         .get("fidoDollarBalanceInfoList", [{}])[0]\
                         .get("fidoDollarBalance")
         except (OSError, ValueError):
-            _LOGGER.error("Can not get fido dollar as json")
-            return False
+            raise PyFidoError("Can not get fido dollar as json")
         if fido_dollar_str is None:
-            _LOGGER.error("Can not get fido dollar")
-            return False
+            raise PyFidoError("Can not get fido dollar")
         # Casting to float
         try:
             fido_dollar = float(fido_dollar_str)
         except ValueError:
-            _LOGGER.error("Can not get fido dollar")
-            return False
+            raise PyFidoError("Can not get fido dollar")
 
         return fido_dollar
 
@@ -227,14 +214,12 @@ class FidoClient(object):
                                     cookies=self._cookies,
                                     timeout=self._timeout)
         except OSError:
-            _LOGGER.error("Can not get usage")
-            return False
+            raise PyFidoError("Can not get usage")
         # Load answer as json
         try:
             output = raw_res.json()
         except (OSError, ValueError):
-            _LOGGER.error("Can not get usage as json")
-            return False
+            raise PyFidoError("Can not get usage as json")
         # Format data
         ret_data = {}
         for data_name, keys in DATA_MAP.items():
@@ -261,30 +246,19 @@ class FidoClient(object):
     def fetch_data(self):
         """Fetch the latest data from Fido."""
         # Post login page
-        if not self._post_login_page():
-            return
+        self._post_login_page()
         # Get token
         token_uuid = self._get_token()
-        if not token_uuid:
-            return
         # Get account number
         account_number = self._get_account_number(*token_uuid)
-        if not token_uuid:
-            return
         # Get balance
         balance = self._get_balance(account_number)
-        if balance is False:
-            return
         self._data['balance'] = balance
         # Get fido dollar
         fido_dollar = self._get_fido_dollar(account_number)
-        if fido_dollar is False:
-            return
         self._data['fido_dollar'] = fido_dollar
         # Get usage
         usage = self._get_usage(account_number)
-        if not usage:
-            return
         # Update data
         self._data.update(usage)
 
