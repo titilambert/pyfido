@@ -1,5 +1,7 @@
-from pyfido import FidoClient, REQUESTS_TIMEOUT
 import argparse
+import json
+
+from pyfido import FidoClient, REQUESTS_TIMEOUT
 
 
 def _format_output(number, data):
@@ -63,7 +65,7 @@ def main():
     if not client.get_data():
         return
     if args.json:
-        print(client.get_data())
+        print(json.dumps(client.get_data()))
     else:
         _format_output(args.number, client.get_data())
 
