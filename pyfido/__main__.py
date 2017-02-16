@@ -20,32 +20,38 @@ Fido Dollars: {d[balance]:.2f} $
 Talk
 ====
 Limit:        {d[talk_limit]} minutes
-Used:         {d[talk_remaining]} minutes
-Remaining:    {d[talk_used]} minutes
+Used:         {d[talk_used]} minutes
+Remaining:    {d[talk_remaining]} minutes
+
+Other Talk (like international calls)
+=====================================
+Limit:        {d[other_talk_limit]} minutes
+Used:         {d[other_talk_used]} minutes
+Remaining:    {d[other_talk_remaining]} minutes
 
 Texts
 =====
 Limit:        {d[text_limit]} messages
-Used:         {d[text_remaining]} messages
-Remaining:    {d[text_used]} messages
+Used:         {d[text_used]} messages
+Remaining:    {d[text_remaining]} messages
 
 MMS
 ===
 Limit:        {d[mms_limit]} messages
-Used:         {d[mms_remaining]} messages
-Remaining:    {d[mms_used]} messages
+Used:         {d[mms_used]} messages
+Remaining:    {d[mms_remaining]} messages
 
 Internation texts
 =================
 Limit:        {d[text_int_limit]} messages
-Used:         {d[text_int_remaining]} messages
-Remaining:    {d[text_int_used]} messages
+Used:         {d[text_int_used]} messages
+Remaining:    {d[text_int_remaining]} messages
 
 Data plan
 =========
 Limit:        {d[data_limit]} Kb
-Used:         {d[data_remaining]} Kb
-Remaining:    {d[data_used]} Kb
+Used:         {d[data_used]} Kb
+Remaining:    {d[data_remaining]} Kb
 """)
     print(output.format(d=data))
 

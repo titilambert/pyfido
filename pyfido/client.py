@@ -26,7 +26,7 @@ DATA_MAP = {'data': ('data', 'D'),
             'mms': ('text', 'M'),
             'text_int': ('text', 'SI'),
             'talk': ('talk', 'V'),
-            'talk_other': ('talk', 'VL')}
+            'other_talk': ('talk', 'VL')}
 
 
 class PyFidoError(Exception):
