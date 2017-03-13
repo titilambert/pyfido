@@ -1,4 +1,5 @@
 import argparse
+import collections
 import json
 import sys
 
@@ -7,9 +8,11 @@ from pyfido import FidoClient, REQUESTS_TIMEOUT
 
 def _format_output(number, data):
     """Format data to get a readable output"""
-    data = dict([(k, int(v) if v is not None else "No limit")
+    raw_data = dict([(k, int(v) if v is not None else "No limit")
                  for k, v in data.items()])
-    data['number'] = number
+    raw_data['number'] = number
+    data = collections.defaultdict(lambda: 0)
+    data.update(raw_data)
     output = ("""Fido data for number: {d[number]}
 
 Balance
@@ -59,8 +62,10 @@ Remaining:    {d[data_remaining]} Kb
 def main():
     """Main function"""
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--number',
-                        required=True, help='Fido phone number')
+    parser.add_argument('-u', '--username',
+                        required=True, help='Fido username')
+    parser.add_argument('-n', '--number', default=None,
+                        required=False, help='Fido phone number')
     parser.add_argument('-p', '--password',
                         required=True, help='Password')
     parser.add_argument('-j', '--json', action='store_true',
@@ -68,7 +73,7 @@ def main():
     parser.add_argument('-t', '--timeout',
                         default=REQUESTS_TIMEOUT, help='Request timeout')
     args = parser.parse_args()
-    client = FidoClient(args.number, args.password, args.timeout)
+    client = FidoClient(args.username, args.password, args.number, args.timeout)
     client.fetch_data()
     if not client.get_data():
         return

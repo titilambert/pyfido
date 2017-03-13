@@ -16,10 +16,10 @@ HOST_FIDO = "https://www.fido.ca/pages/api/selfserve"
 LOGIN_URL = "{}/widget/traditional_signin.jsonp".format(HOST_JANRAIN)
 TOKEN_URL = "{}/widget/get_result.jsonp".format(HOST_JANRAIN)
 ACCOUNT_URL = "{}/v3/login".format(HOST_FIDO)
+LIST_NUMBERS_URL = "{}/v2/accountOverview".format(HOST_FIDO)
 BALANCE_URL = "{}/v2/accountOverview".format(HOST_FIDO)
 FIDO_DOLLAR_URL = "{}/v1/wireless/rewards/basicinfo".format(HOST_FIDO)
 USAGE_URL = "{}/v1/postpaid/dashboard/usage".format(HOST_FIDO)
-
 
 DATA_MAP = {'data': ('data', 'D'),
             'text': ('text', 'BL'),
@@ -35,9 +35,13 @@ class PyFidoError(Exception):
 
 class FidoClient(object):
 
-    def __init__(self, number, password, timeout=REQUESTS_TIMEOUT):
+    def __init__(self, username, password, number=None, timeout=REQUESTS_TIMEOUT):
         """Initialize the client object."""
-        self.number = number
+        self.username = username
+        if number is None:
+            self.number = username
+        else:
+            self.number = number
         self.password = password
         self._timeout = timeout
         self._data = {}
@@ -55,7 +59,7 @@ class FidoClient(object):
             "redirect_uri": "https://www.fido.ca/pages/#/",
             "response_type": "token",
             "locale": "en-US",
-            "userID": self.number,
+            "userID": self.username,
             "currentPassword": self.password,
         }
         # HTTP request
@@ -125,10 +129,45 @@ class FidoClient(object):
 
         return account_number
 
+    def _list_phone_numbers(self, account_number):
+        # Data
+        data = {"accountNumber": account_number,
+                # Language setting is useless
+                # "language": "fr",
+                "refresh": False}
+        # Http request
+        try:
+
+            raw_res = requests.post(LIST_NUMBERS_URL,
+                                    data=data,
+                                    headers=self._headers,
+                                    cookies=self._cookies,
+                                    timeout=self._timeout)
+        except OSError:
+            raise PyFidoError("Can not get account number")
+        # Load answer as json
+        phone_number_list = []
+        try:
+            # Get phone numbers
+            services = raw_res.json().get('getAccountInfo', {})\
+                .get('subscriberService', [])
+            for service in services:
+                number = service.get('service', [{}])[0].get('subscriberNo')
+                phone_number_list.append(number)
+        except (OSError, ValueError):
+            raise PyFidoError("Bad json getting account number")
+        # Check collected data
+        if phone_number_list == []:
+            raise PyFidoError("Can not get phone numbers")
+        # Update cookies
+        self._cookies.update(raw_res.cookies)
+
+        return phone_number_list
+
     def _get_balance(self, account_number):
         """Get current balance from Fido."""
         # Prepare data
-        data = {"ctn": self.number,
+        data = {"ctn": self.username,
                 "language": "en-US",
                 "accountNumber": account_number}
         # Http request
@@ -220,6 +259,7 @@ class FidoClient(object):
             output = raw_res.json()
         except (OSError, ValueError):
             raise PyFidoError("Can not get usage as json")
+        print(output)
         # Format data
         ret_data = {}
         for data_name, keys in DATA_MAP.items():
@@ -251,6 +291,13 @@ class FidoClient(object):
         token_uuid = self._get_token()
         # Get account number
         account_number = self._get_account_number(*token_uuid)
+        # List phone numbers
+        phone_numbers = self._list_phone_numbers(account_number)
+        if self.number not in phone_numbers:
+            raise PyFidoError("Can not find phone number: {}. Phone numbers "
+                              "in the account: "
+                              "{}".format(self.number,
+                                          ", ".join(phone_numbers)))
         # Get balance
         balance = self._get_balance(account_number)
         self._data['balance'] = balance
