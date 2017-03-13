@@ -22,7 +22,7 @@ Print your current data
 
 ::
 
-    pyfido -n 1112224444 -p MYPASSWORD
+    pyfido -u 1112224444 -p MYPASSWORD
 
 
 Print help
@@ -30,10 +30,12 @@ Print help
 ::
 
     pyfido -h
-    usage: pyfido [-h] -n NUMBER -p PASSWORD [-j] [-t TIMEOUT]
+    usage: pyfido [-h] -u USERNAME [-n NUMBER] -p PASSWORD [-j] [-t TIMEOUT]
 
     optional arguments:
       -h, --help            show this help message and exit
+      -u USERNAME, --username USERNAME
+                            Fido username
       -n NUMBER, --number NUMBER
                             Fido phone number
       -p PASSWORD, --password PASSWORD
@@ -41,8 +43,6 @@ Print help
       -j, --json            Json output
       -t TIMEOUT, --timeout TIMEOUT
                             Request timeout
-
-
 
 Dev env
 #######
