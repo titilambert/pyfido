@@ -30,7 +30,7 @@ Print help
 ::
 
     pyfido -h
-    usage: pyfido [-h] -u USERNAME [-n NUMBER] -p PASSWORD [-j] [-t TIMEOUT]
+    usage: pyfido [-h] -u USERNAME [-n NUMBER] -p PASSWORD [-l] [-j] [-t TIMEOUT]
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -40,6 +40,7 @@ Print help
                             Fido phone number
       -p PASSWORD, --password PASSWORD
                             Password
+      -l, --list            List phone numbers
       -j, --json            Json output
       -t TIMEOUT, --timeout TIMEOUT
                             Request timeout

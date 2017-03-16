@@ -68,6 +68,8 @@ def main():
                         required=False, help='Fido phone number')
     parser.add_argument('-p', '--password',
                         required=True, help='Password')
+    parser.add_argument('-l', '--list', action='store_true',
+                        default=False, help='List phone numbers')
     parser.add_argument('-j', '--json', action='store_true',
                         default=False, help='Json output')
     parser.add_argument('-t', '--timeout',
@@ -75,12 +77,21 @@ def main():
     args = parser.parse_args()
     client = FidoClient(args.username, args.password, args.number, args.timeout)
     client.fetch_data()
-    if not client.get_data():
-        return
-    if args.json:
-        print(json.dumps(client.get_data()))
+    if args.list:
+        if not client.get_phone_numbers():
+            return
+        if args.json:
+            print(json.dumps(client.get_phone_numbers()))
+        else:
+            print("Phone numbers: "
+                  "{}".format(", ".join(client.get_phone_numbers())))
     else:
-        _format_output(args.number, client.get_data())
+        if not client.get_data():
+            return
+        if args.json:
+            print(json.dumps(client.get_data()))
+        else:
+            _format_output(args.number, client.get_data())
 
 
 if __name__ == '__main__':

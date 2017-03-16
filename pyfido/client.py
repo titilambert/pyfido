@@ -43,6 +43,7 @@ class FidoClient(object):
         else:
             self.number = number
         self.password = password
+        self._phone_numbers = []
         self._timeout = timeout
         self._data = {}
         self._headers = {'User-Agent': ('Mozilla/5.0 (X11; Linux x86_64; '
@@ -259,7 +260,6 @@ class FidoClient(object):
             output = raw_res.json()
         except (OSError, ValueError):
             raise PyFidoError("Can not get usage as json")
-        print(output)
         # Format data
         ret_data = {}
         for data_name, keys in DATA_MAP.items():
@@ -292,8 +292,8 @@ class FidoClient(object):
         # Get account number
         account_number = self._get_account_number(*token_uuid)
         # List phone numbers
-        phone_numbers = self._list_phone_numbers(account_number)
-        if self.number not in phone_numbers:
+        self._phone_numbers = self._list_phone_numbers(account_number)
+        if self.number not in self._phone_numbers:
             raise PyFidoError("Can not find phone number: {}. Phone numbers "
                               "in the account: "
                               "{}".format(self.number,
@@ -312,3 +312,7 @@ class FidoClient(object):
     def get_data(self):
         """Return collected data"""
         return self._data
+
+    def get_phone_numbers(self):
+        """Return list of phone numbers"""
+        return self._phone_numbers
