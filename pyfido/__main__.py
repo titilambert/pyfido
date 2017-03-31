@@ -6,31 +6,28 @@ import sys
 from pyfido import FidoClient, REQUESTS_TIMEOUT
 
 
-def _format_output(number, data):
-    """Format data to get a readable output"""
-    raw_data = dict([(k, int(v) if v is not None else "No limit")
-                 for k, v in data.items()])
-    raw_data['number'] = number
-    data = collections.defaultdict(lambda: 0)
-    data.update(raw_data)
-    output = ("""Fido data for number: {d[number]}
+def _print_number(data):
+    output = ("""
+=====================================================
 
-Balance
-=======
-Balance:      {d[balance]:.2f} $
-Fido Dollars: {d[balance]:.2f} $
+Fido data for number: {d[number]}
+
+Fido Dollars
+============
+
+Fido Dollars : {d[fido_dollar]:.2f} $
+
+Data plan
+=========
+Limit:        {d[data_limit]} Kb
+Used:         {d[data_used]} Kb
+Remaining:    {d[data_remaining]} Kb
 
 Talk
 ====
 Limit:        {d[talk_limit]} minutes
 Used:         {d[talk_used]} minutes
 Remaining:    {d[talk_remaining]} minutes
-
-Other Talk (like international calls)
-=====================================
-Limit:        {d[other_talk_limit]} minutes
-Used:         {d[other_talk_used]} minutes
-Remaining:    {d[other_talk_remaining]} minutes
 
 Texts
 =====
@@ -49,14 +46,40 @@ Internation texts
 Limit:        {d[text_int_limit]} messages
 Used:         {d[text_int_used]} messages
 Remaining:    {d[text_int_remaining]} messages
-
-Data plan
-=========
-Limit:        {d[data_limit]} Kb
-Used:         {d[data_used]} Kb
-Remaining:    {d[data_remaining]} Kb
 """)
     print(output.format(d=data))
+
+    if 'other_talk_limit' in data:
+        output = ("""
+Other Talk (like international calls)
+=====================================
+Limit:        {d[other_talk_limit]} minutes
+Used:         {d[other_talk_used]} minutes
+Remaining:    {d[other_talk_remaining]} minutes
+""")
+        print(output.format(d=data))
+
+
+
+def _format_output(number, raw_data):
+    """Format data to get a readable output"""
+    tmp_data = {}
+    data = collections.defaultdict(lambda: 0)
+    balance = raw_data.pop('balance')
+    if number is None:
+        for number in raw_data.keys():
+            tmp_data = dict([(k, int(v) if v is not None else "No limit")
+                             for k, v in raw_data[number].items()])
+            tmp_data['number'] = number
+            data[number] = tmp_data
+    output = ("""Account Balance
+=======
+
+Balance:      {:.2f} $
+""")
+    print(output.format(balance))
+    for number_data in data.values():
+        _print_number(number_data)
 
 
 def main():
@@ -75,7 +98,7 @@ def main():
     parser.add_argument('-t', '--timeout',
                         default=REQUESTS_TIMEOUT, help='Request timeout')
     args = parser.parse_args()
-    client = FidoClient(args.username, args.password, args.number, args.timeout)
+    client = FidoClient(args.username, args.password, args.timeout)
     client.fetch_data()
     if args.list:
         if not client.get_phone_numbers():

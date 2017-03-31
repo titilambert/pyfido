@@ -35,13 +35,9 @@ class PyFidoError(Exception):
 
 class FidoClient(object):
 
-    def __init__(self, username, password, number=None, timeout=REQUESTS_TIMEOUT):
+    def __init__(self, username, password, timeout=REQUESTS_TIMEOUT):
         """Initialize the client object."""
         self.username = username
-        if number is None:
-            self.number = username
-        else:
-            self.number = number
         self.password = password
         self._phone_numbers = []
         self._timeout = timeout
@@ -130,7 +126,7 @@ class FidoClient(object):
 
         return account_number
 
-    def _list_phone_numbers(self, account_number):
+    def _list_phone_numbers(self, account_number=None):
         # Data
         data = {"accountNumber": account_number,
                 # Language setting is useless
@@ -197,11 +193,11 @@ class FidoClient(object):
 
         return balance
 
-    def _get_fido_dollar(self, account_number):
+    def _get_fido_dollar(self, account_number, number):
         """Get current Fido dollar balance."""
         # Prepare data
         data = json.dumps({"fidoDollarBalanceFormList":
-                           [{"phoneNumber": self.number,
+                           [{"phoneNumber": number,
                              "accountNumber": account_number}]})
         # Prepare headers
         headers_json = self._headers.copy()
@@ -232,7 +228,7 @@ class FidoClient(object):
 
         return fido_dollar
 
-    def _get_usage(self, account_number):
+    def _get_usage(self, account_number, number):
         """Get Fido usage.
 
         Get the following data
@@ -243,7 +239,7 @@ class FidoClient(object):
         Roaming data is not supported yet
         """
         # Prepare data
-        data = {"ctn": self.number,
+        data = {"ctn": number,
                 "language": "en-US",
                 "accountNumber": account_number}
         # Http request
@@ -293,21 +289,17 @@ class FidoClient(object):
         account_number = self._get_account_number(*token_uuid)
         # List phone numbers
         self._phone_numbers = self._list_phone_numbers(account_number)
-        if self.number not in self._phone_numbers:
-            raise PyFidoError("Can not find phone number: {}. Phone numbers "
-                              "in the account: "
-                              "{}".format(self.number,
-                                          ", ".join(phone_numbers)))
         # Get balance
         balance = self._get_balance(account_number)
         self._data['balance'] = balance
         # Get fido dollar
-        fido_dollar = self._get_fido_dollar(account_number)
-        self._data['fido_dollar'] = fido_dollar
+        for number in self._phone_numbers:
+            fido_dollar = self._get_fido_dollar(account_number, number)
+            self._data[number]= {'fido_dollar': fido_dollar}
         # Get usage
-        usage = self._get_usage(account_number)
-        # Update data
-        self._data.update(usage)
+        for number in self._phone_numbers:
+            usage = self._get_usage(account_number, number)
+            self._data[number].update(usage)
 
     def get_data(self):
         """Return collected data"""
