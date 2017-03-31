@@ -61,17 +61,18 @@ Remaining:    {d[other_talk_remaining]} minutes
 
 
 
-def _format_output(number, raw_data):
+def _format_output(selected_number, raw_data):
     """Format data to get a readable output"""
     tmp_data = {}
     data = collections.defaultdict(lambda: 0)
     balance = raw_data.pop('balance')
-    if number is None:
-        for number in raw_data.keys():
-            tmp_data = dict([(k, int(v) if v is not None else "No limit")
-                             for k, v in raw_data[number].items()])
-            tmp_data['number'] = number
+    for number in raw_data.keys():
+        tmp_data = dict([(k, int(v) if v is not None else "No limit")
+                         for k, v in raw_data[number].items()])
+        tmp_data['number'] = number
+        if selected_number is None or selected_number == number:
             data[number] = tmp_data
+
     output = ("""Account Balance
 =======
 

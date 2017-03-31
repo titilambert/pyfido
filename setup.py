@@ -7,7 +7,7 @@ install_reqs = parse_requirements('requirements.txt', session=session)
 test_reqs = parse_requirements('test_requirements.txt', session=session)
 
 setup(name='pyfido',
-      version='1.0.0',
+      version='1.0.1',
       description='Get your Fido consumption (wwww.fido.ca)',
       author='Thibault Cohen',
       author_email='titilambert@gmail.com',
