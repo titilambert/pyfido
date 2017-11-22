@@ -1,3 +1,4 @@
+import asyncio
 import argparse
 import collections
 import json
@@ -100,7 +101,9 @@ def main():
                         default=REQUESTS_TIMEOUT, help='Request timeout')
     args = parser.parse_args()
     client = FidoClient(args.username, args.password, args.timeout)
-    client.fetch_data()
+    loop = asyncio.get_event_loop()
+    fut = asyncio.wait([client.fetch_data()])
+    loop.run_until_complete(fut)
     if args.list:
         if not client.get_phone_numbers():
             return
