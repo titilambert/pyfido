@@ -36,7 +36,7 @@ class PyFidoError(Exception):
 
 class FidoClient(object):
 
-    def __init__(self, username, password, timeout=REQUESTS_TIMEOUT):
+    def __init__(self, username, password, timeout=REQUESTS_TIMEOUT, session=None):
         """Initialize the client object."""
         self.username = username
         self.password = password
@@ -46,7 +46,12 @@ class FidoClient(object):
         self._headers = {'User-Agent': ('Mozilla/5.0 (X11; Linux x86_64; '
                                        'rv:10.0.7) Gecko/20100101 '
                                        'Firefox/10.0.7 Iceweasel/10.0.7')}
-        self._session = None
+        self._session = session
+
+    @asyncio.coroutine
+    def _get_httpsession(self):
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
 
     @asyncio.coroutine
     def _post_login_page(self):
@@ -284,28 +289,32 @@ class FidoClient(object):
     @asyncio.coroutine
     def fetch_data(self):
         """Fetch the latest data from Fido."""
-        with aiohttp.ClientSession() as session:
-            self._session = session
-            # Post login page
-            yield from self._post_login_page()
-            # Get token
-            token_uuid = yield from self._get_token()
-            # Get account number
-            account_number = yield from self._get_account_number(*token_uuid)
-            # List phone numbers
-            self._phone_numbers = yield from self._list_phone_numbers(account_number)
-            # Get balance
-            balance = yield from self._get_balance(account_number)
-            self._data['balance'] = balance
-            # Get fido dollar
-            for number in self._phone_numbers:
-                fido_dollar = yield from self._get_fido_dollar(account_number,
-                                                               number)
-                self._data[number]= {'fido_dollar': fido_dollar}
-            # Get usage
-            for number in self._phone_numbers:
-                usage = yield from self._get_usage(account_number, number)
-                self._data[number].update(usage)
+        # Get http session
+        yield from self._get_httpsession()
+        # Post login page
+        yield from self._post_login_page()
+        # Get token
+        token_uuid = yield from self._get_token()
+        # Get account number
+        account_number = yield from self._get_account_number(*token_uuid)
+        # List phone numbers
+        self._phone_numbers = yield from self._list_phone_numbers(account_number)
+        # Get balance
+        balance = yield from self._get_balance(account_number)
+        self._data['balance'] = balance
+        # Get fido dollar
+        for number in self._phone_numbers:
+            fido_dollar = yield from self._get_fido_dollar(account_number,
+                                                           number)
+            self._data[number]= {'fido_dollar': fido_dollar}
+        # Get usage
+        for number in self._phone_numbers:
+            usage = yield from self._get_usage(account_number, number)
+            self._data[number].update(usage)
+
+    def close_session(self):
+        """Close current session."""
+        self._session.close()
 
     def get_data(self):
         """Return collected data"""

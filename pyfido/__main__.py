@@ -119,6 +119,7 @@ def main():
             print(json.dumps(client.get_data()))
         else:
             _format_output(args.number, client.get_data())
+    client.close_session()
 
 
 if __name__ == '__main__':
