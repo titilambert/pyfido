@@ -4,7 +4,7 @@ install_requires = list(val.strip() for val in open('requirements.txt'))
 tests_require = list(val.strip() for val in open('test_requirements.txt'))
 
 setup(name='pyfido',
-      version='2.1.0',
+      version='2.1.1',
       description='Get your Fido consumption (wwww.fido.ca)',
       author='Thibault Cohen',
       author_email='titilambert@gmail.com',
