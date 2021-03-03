@@ -1,9 +1,7 @@
 """
 Pyfido
 """
-import asyncio
 import json
-import logging
 import re
 
 import aiohttp
@@ -47,14 +45,14 @@ class FidoClient(object):
                                        'rv:10.0.7) Gecko/20100101 '
                                        'Firefox/10.0.7 Iceweasel/10.0.7')}
         self._session = session
+        self._session_close = False
 
-    @asyncio.coroutine
-    def _get_httpsession(self):
+    async def _get_httpsession(self):
         if self._session is None:
             self._session = aiohttp.ClientSession()
+            self._session_close = True
 
-    @asyncio.coroutine
-    def _post_login_page(self):
+    async def _post_login_page(self):
         """Login to Janrain."""
         # Prepare post data
         data = {
@@ -68,7 +66,7 @@ class FidoClient(object):
         }
         # HTTP request
         try:
-            raw_res = yield from self._session.post(LOGIN_URL,
+            raw_res = await self._session.post(LOGIN_URL,
                                                     headers=self._headers,
                                                     data=data,
                                                     timeout=self._timeout)
@@ -77,18 +75,17 @@ class FidoClient(object):
 
         return True
 
-    @asyncio.coroutine
-    def _get_token(self):
+    async def _get_token(self):
         """Get token from JanRain."""
         # HTTP request
         try:
-            raw_res = yield from self._session.get(TOKEN_URL,
+            raw_res = await self._session.get(TOKEN_URL,
                                                    headers=self._headers,
                                                    timeout=self._timeout)
         except OSError:
             raise PyFidoError("Can not get token")
         # Research for json in answer
-        content = yield from raw_res.text()
+        content = await raw_res.text()
         reg_res = re.search(r"\({.*}\)", content)
         if reg_res is None:
             raise PyFidoError("Can not finf token json")
@@ -103,15 +100,14 @@ class FidoClient(object):
 
         return token, uuid
 
-    @asyncio.coroutine
-    def _get_account_number(self, token, uuid):
+    async def _get_account_number(self, token, uuid):
         """Get fido account number."""
         # Data
         data = {"accessToken": token,
                 "uuid": uuid}
         # Http request
         try:
-            raw_res = yield from self._session.post(ACCOUNT_URL,
+            raw_res = await self._session.post(ACCOUNT_URL,
                                                     data=data,
                                                     headers=self._headers,
                                                     timeout=self._timeout)
@@ -119,7 +115,7 @@ class FidoClient(object):
             raise PyFidoError("Can not get account number")
         # Load answer as json
         try:
-            json_content = yield from raw_res.json()
+            json_content = await raw_res.json()
             account_number = json_content\
                             .get('getCustomerAccounts', {})\
                             .get('accounts', [{}])[0]\
@@ -132,8 +128,7 @@ class FidoClient(object):
 
         return account_number
 
-    @asyncio.coroutine
-    def _list_phone_numbers(self, account_number=None):
+    async def _list_phone_numbers(self, account_number=None):
         # Data
         data = {"accountNumber": account_number,
                 # Language setting is useless
@@ -142,7 +137,7 @@ class FidoClient(object):
         # Http request
         try:
 
-            raw_res = yield from self._session.post(LIST_NUMBERS_URL,
+            raw_res = await self._session.post(LIST_NUMBERS_URL,
                                                     data=data,
                                                     headers=self._headers,
                                                     timeout=self._timeout)
@@ -152,7 +147,7 @@ class FidoClient(object):
         phone_number_list = []
         try:
             # Get phone numbers
-            json_content = yield from raw_res.json()
+            json_content = await raw_res.json()
             services = json_content.get('getAccountInfo', {})\
                 .get('subscriberService', [])
             for service in services:
@@ -166,8 +161,7 @@ class FidoClient(object):
 
         return phone_number_list
 
-    @asyncio.coroutine
-    def _get_balance(self, account_number):
+    async def _get_balance(self, account_number):
         """Get current balance from Fido."""
         # Prepare data
         data = {"ctn": self.username,
@@ -175,7 +169,7 @@ class FidoClient(object):
                 "accountNumber": account_number}
         # Http request
         try:
-            raw_res = yield from self._session.post(BALANCE_URL,
+            raw_res = await self._session.post(BALANCE_URL,
                                                     data=data,
                                                     headers=self._headers,
                                                     timeout=self._timeout)
@@ -183,7 +177,7 @@ class FidoClient(object):
             raise PyFidoError("Can not get balance")
         # Get balance
         try:
-            json_content = yield from raw_res.json()
+            json_content = await raw_res.json()
             balance_str = json_content\
                             .get("getAccountInfo", {})\
                             .get("balance")
@@ -199,8 +193,7 @@ class FidoClient(object):
 
         return balance
 
-    @asyncio.coroutine
-    def _get_fido_dollar(self, account_number, number):
+    async def _get_fido_dollar(self, account_number, number):
         """Get current Fido dollar balance."""
         # Prepare data
         data = json.dumps({"fidoDollarBalanceFormList":
@@ -211,7 +204,7 @@ class FidoClient(object):
         headers_json["Content-Type"] = "application/json;charset=UTF-8"
         # Http request
         try:
-            raw_res = yield from self._session.post(FIDO_DOLLAR_URL,
+            raw_res = await self._session.post(FIDO_DOLLAR_URL,
                                                     data=data,
                                                     headers=headers_json,
                                                     timeout=self._timeout)
@@ -219,7 +212,7 @@ class FidoClient(object):
             raise PyFidoError("Can not get fido dollar")
         # Get fido dollar
         try:
-            json_content = yield from raw_res.json()
+            json_content = await raw_res.json()
             fido_dollar_str = json_content\
                         .get("fidoDollarBalanceInfoList", [{}])[0]\
                         .get("fidoDollarBalance")
@@ -235,8 +228,7 @@ class FidoClient(object):
 
         return fido_dollar
 
-    @asyncio.coroutine
-    def _get_usage(self, account_number, number):
+    async def _get_usage(self, account_number, number):
         """Get Fido usage.
 
         Get the following data
@@ -252,7 +244,7 @@ class FidoClient(object):
                 "accountNumber": account_number}
         # Http request
         try:
-            raw_res = yield from self._session.post(USAGE_URL,
+            raw_res = await self._session.post(USAGE_URL,
                                                     data=data,
                                                     headers=self._headers,
                                                     timeout=self._timeout)
@@ -260,7 +252,7 @@ class FidoClient(object):
             raise PyFidoError("Can not get usage")
         # Load answer as json
         try:
-            output = yield from raw_res.json()
+            output = await raw_res.json()
         except (OSError, ValueError):
             raise PyFidoError("Can not get usage as json")
         # Format data
@@ -286,35 +278,35 @@ class FidoClient(object):
 
         return ret_data
 
-    @asyncio.coroutine
-    def fetch_data(self):
+    async def fetch_data(self):
         """Fetch the latest data from Fido."""
         # Get http session
-        yield from self._get_httpsession()
+        await self._get_httpsession()
         # Post login page
-        yield from self._post_login_page()
+        await self._post_login_page()
         # Get token
-        token_uuid = yield from self._get_token()
+        token_uuid = await self._get_token()
         # Get account number
-        account_number = yield from self._get_account_number(*token_uuid)
+        account_number = await self._get_account_number(*token_uuid)
         # List phone numbers
-        self._phone_numbers = yield from self._list_phone_numbers(account_number)
+        self._phone_numbers = await self._list_phone_numbers(account_number)
         # Get balance
-        balance = yield from self._get_balance(account_number)
+        balance = await self._get_balance(account_number)
         self._data['balance'] = balance
         # Get fido dollar
         for number in self._phone_numbers:
-            fido_dollar = yield from self._get_fido_dollar(account_number,
+            fido_dollar = await self._get_fido_dollar(account_number,
                                                            number)
             self._data[number]= {'fido_dollar': fido_dollar}
         # Get usage
         for number in self._phone_numbers:
-            usage = yield from self._get_usage(account_number, number)
+            usage = await self._get_usage(account_number, number)
             self._data[number].update(usage)
 
     def close_session(self):
-        """Close current session."""
-        self._session.close()
+        """Close current session, if self created."""
+        if self._session and self._session_close:
+            self._session.close()
 
     def get_data(self):
         """Return collected data"""
